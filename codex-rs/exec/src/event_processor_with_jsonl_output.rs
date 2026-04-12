@@ -6,6 +6,7 @@ use std::sync::atomic::Ordering;
 use codex_app_server_protocol::CollabAgentTool;
 use codex_app_server_protocol::CollabAgentToolCallStatus;
 use codex_app_server_protocol::CommandExecutionStatus;
+use codex_app_server_protocol::McpServerStartupState;
 use codex_app_server_protocol::McpToolCallStatus;
 use codex_app_server_protocol::PatchApplyStatus;
 use codex_app_server_protocol::PatchChangeKind;
@@ -35,6 +36,10 @@ use crate::exec_events::FileUpdateChange;
 use crate::exec_events::ItemCompletedEvent;
 use crate::exec_events::ItemStartedEvent;
 use crate::exec_events::ItemUpdatedEvent;
+use crate::exec_events::McpServerCancelledEvent;
+use crate::exec_events::McpServerFailedEvent;
+use crate::exec_events::McpServerInitStartedEvent;
+use crate::exec_events::McpServerReadyEvent;
 use crate::exec_events::McpToolCallItem;
 use crate::exec_events::McpToolCallItemError;
 use crate::exec_events::McpToolCallItemResult;
@@ -576,6 +581,26 @@ impl EventProcessorWithJsonOutput {
             }
             ServerNotification::TurnStarted(_) => {
                 events.push(ThreadEvent::TurnStarted(TurnStartedEvent {}));
+                CodexStatus::Running
+            }
+            ServerNotification::McpServerStatusUpdated(notification) => {
+                let name = notification.name;
+                let error = notification.error;
+                let event = match notification.status {
+                    McpServerStartupState::Starting => {
+                        ThreadEvent::McpServerInitStarted(McpServerInitStartedEvent { name })
+                    }
+                    McpServerStartupState::Ready => {
+                        ThreadEvent::McpServerReady(McpServerReadyEvent { name })
+                    }
+                    McpServerStartupState::Failed => {
+                        ThreadEvent::McpServerFailed(McpServerFailedEvent { name, error })
+                    }
+                    McpServerStartupState::Cancelled => {
+                        ThreadEvent::McpServerCancelled(McpServerCancelledEvent { name, error })
+                    }
+                };
+                events.push(event);
                 CodexStatus::Running
             }
             _ => CodexStatus::Running,

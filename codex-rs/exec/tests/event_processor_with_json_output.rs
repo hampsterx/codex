@@ -11,6 +11,8 @@ use codex_app_server_protocol::ErrorNotification;
 use codex_app_server_protocol::FileUpdateChange as ApiFileUpdateChange;
 use codex_app_server_protocol::ItemCompletedNotification;
 use codex_app_server_protocol::ItemStartedNotification;
+use codex_app_server_protocol::McpServerStartupState;
+use codex_app_server_protocol::McpServerStatusUpdatedNotification;
 use codex_app_server_protocol::McpToolCallError;
 use codex_app_server_protocol::McpToolCallResult;
 use codex_app_server_protocol::McpToolCallStatus as ApiMcpToolCallStatus;
@@ -55,6 +57,10 @@ use codex_exec::FileUpdateChange as ExecFileUpdateChange;
 use codex_exec::ItemCompletedEvent;
 use codex_exec::ItemStartedEvent;
 use codex_exec::ItemUpdatedEvent;
+use codex_exec::McpServerCancelledEvent;
+use codex_exec::McpServerFailedEvent;
+use codex_exec::McpServerInitStartedEvent;
+use codex_exec::McpServerReadyEvent;
 use codex_exec::McpToolCallItem;
 use codex_exec::McpToolCallItemError;
 use codex_exec::McpToolCallItemResult;
@@ -1601,6 +1607,101 @@ fn model_reroute_surfaces_as_error_item() {
         item.details,
         ThreadItemDetails::Error(ErrorItem {
             message: "model rerouted: gpt-5 -> gpt-5-mini (HighRiskCyberActivity)".to_string(),
+        })
+    );
+}
+
+#[test]
+fn mcp_server_startup_states_emit_and_serialize_as_lifecycle_events() {
+    let mut processor = EventProcessorWithJsonOutput::new(/*last_message_path*/ None);
+
+    let cases = vec![
+        (
+            McpServerStatusUpdatedNotification {
+                name: "docs".to_string(),
+                status: McpServerStartupState::Starting,
+                error: None,
+            },
+            ThreadEvent::McpServerInitStarted(McpServerInitStartedEvent {
+                name: "docs".to_string(),
+            }),
+            "mcp.server.init_started",
+        ),
+        (
+            McpServerStatusUpdatedNotification {
+                name: "docs".to_string(),
+                status: McpServerStartupState::Ready,
+                error: None,
+            },
+            ThreadEvent::McpServerReady(McpServerReadyEvent {
+                name: "docs".to_string(),
+            }),
+            "mcp.server.ready",
+        ),
+        (
+            McpServerStatusUpdatedNotification {
+                name: "flaky".to_string(),
+                status: McpServerStartupState::Failed,
+                error: Some("handshake timeout".to_string()),
+            },
+            ThreadEvent::McpServerFailed(McpServerFailedEvent {
+                name: "flaky".to_string(),
+                error: Some("handshake timeout".to_string()),
+            }),
+            "mcp.server.failed",
+        ),
+        (
+            McpServerStatusUpdatedNotification {
+                name: "slow".to_string(),
+                status: McpServerStartupState::Cancelled,
+                error: Some("interrupted before handshake".to_string()),
+            },
+            ThreadEvent::McpServerCancelled(McpServerCancelledEvent {
+                name: "slow".to_string(),
+                error: Some("interrupted before handshake".to_string()),
+            }),
+            "mcp.server.cancelled",
+        ),
+    ];
+
+    for (notification, expected_event, expected_type) in cases {
+        let collected = processor
+            .collect_thread_events(ServerNotification::McpServerStatusUpdated(notification));
+        assert_eq!(collected.status, CodexStatus::Running);
+        assert_eq!(collected.events, vec![expected_event.clone()]);
+
+        let serialized = serde_json::to_value(&expected_event).expect("serialize ThreadEvent");
+        assert_eq!(
+            serialized.get("type").and_then(|v| v.as_str()),
+            Some(expected_type),
+            "unexpected wire type for {expected_type}"
+        );
+    }
+
+    // Failed and Cancelled events should serialize `error` when present and omit it when absent.
+    let failed_without_error = ThreadEvent::McpServerFailed(McpServerFailedEvent {
+        name: "bare".to_string(),
+        error: None,
+    });
+    let serialized = serde_json::to_value(&failed_without_error).expect("serialize");
+    assert_eq!(
+        serialized,
+        json!({
+            "type": "mcp.server.failed",
+            "name": "bare",
+        })
+    );
+
+    let cancelled_without_error = ThreadEvent::McpServerCancelled(McpServerCancelledEvent {
+        name: "bare".to_string(),
+        error: None,
+    });
+    let serialized = serde_json::to_value(&cancelled_without_error).expect("serialize");
+    assert_eq!(
+        serialized,
+        json!({
+            "type": "mcp.server.cancelled",
+            "name": "bare",
         })
     );
 }

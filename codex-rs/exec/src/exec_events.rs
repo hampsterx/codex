@@ -31,6 +31,18 @@ pub enum ThreadEvent {
     /// Signals that an item has reached a terminal state—either success or failure.
     #[serde(rename = "item.completed")]
     ItemCompleted(ItemCompletedEvent),
+    /// Emitted when an MCP server begins initialization.
+    #[serde(rename = "mcp.server.init_started")]
+    McpServerInitStarted(McpServerInitStartedEvent),
+    /// Emitted when an MCP server has finished initializing and is ready to accept tool calls.
+    #[serde(rename = "mcp.server.ready")]
+    McpServerReady(McpServerReadyEvent),
+    /// Emitted when an MCP server failed to initialize before reaching ready state.
+    #[serde(rename = "mcp.server.failed")]
+    McpServerFailed(McpServerFailedEvent),
+    /// Emitted when an MCP server's initialization was cancelled (e.g. interrupted before handshake completed).
+    #[serde(rename = "mcp.server.cancelled")]
+    McpServerCancelled(McpServerCancelledEvent),
     /// Represents an unrecoverable error emitted directly by the event stream.
     #[serde(rename = "error")]
     Error(ThreadErrorEvent),
@@ -86,6 +98,40 @@ pub struct ItemUpdatedEvent {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS)]
 pub struct ThreadErrorEvent {
     pub message: String,
+}
+
+/// An MCP server has begun initialization.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS)]
+pub struct McpServerInitStartedEvent {
+    /// Name of the MCP server as declared in the user's Codex config.
+    pub name: String,
+}
+
+/// An MCP server has finished initialization and is ready to accept tool calls.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS)]
+pub struct McpServerReadyEvent {
+    /// Name of the MCP server as declared in the user's Codex config.
+    pub name: String,
+}
+
+/// An MCP server failed to initialize before reaching the ready state.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS)]
+pub struct McpServerFailedEvent {
+    /// Name of the MCP server as declared in the user's Codex config.
+    pub name: String,
+    /// Human-readable failure reason, if the underlying notification provided one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+}
+
+/// An MCP server's initialization was cancelled before the handshake completed.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS)]
+pub struct McpServerCancelledEvent {
+    /// Name of the MCP server as declared in the user's Codex config.
+    pub name: String,
+    /// Human-readable cancellation reason, if the underlying notification provided one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
 }
 
 /// Canonical representation of a thread item and its domain-specific payload.
