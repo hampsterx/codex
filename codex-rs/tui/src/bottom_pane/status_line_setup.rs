@@ -82,6 +82,9 @@ pub(crate) enum StatusLineItem {
     /// Short label derived from the active Codex home directory.
     CodexHome,
 
+    /// Signed-in account and plan when available.
+    Account,
+
     /// Current git branch name (if in a repository).
     GitBranch,
 
@@ -175,6 +178,7 @@ impl StatusLineItem {
             StatusLineItem::ProjectRoot => "Project name (omitted when unavailable)",
             StatusLineItem::Hostname => "Current machine hostname (omitted when unavailable)",
             StatusLineItem::CodexHome => "Active CODEX_HOME directory label",
+            StatusLineItem::Account => "Signed-in account and plan (when available)",
             StatusLineItem::GitBranch => "Current Git branch (omitted when unavailable)",
             StatusLineItem::PullRequestNumber => {
                 "Open pull request number for the current branch (omitted when unavailable)"
@@ -236,6 +240,7 @@ impl StatusLineItem {
             StatusLineItem::ProjectRoot => StatusSurfacePreviewItem::ProjectRoot,
             StatusLineItem::Hostname => StatusSurfacePreviewItem::Hostname,
             StatusLineItem::CodexHome => StatusSurfacePreviewItem::CodexHome,
+            StatusLineItem::Account => StatusSurfacePreviewItem::Account,
             StatusLineItem::GitBranch => StatusSurfacePreviewItem::GitBranch,
             StatusLineItem::PullRequestNumber => StatusSurfacePreviewItem::PullRequestNumber,
             StatusLineItem::BranchChanges => StatusSurfacePreviewItem::BranchChanges,

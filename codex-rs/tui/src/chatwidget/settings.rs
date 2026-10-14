@@ -235,6 +235,7 @@ impl ChatWidget {
         if let Some(StatusAccountDisplay::ChatGpt { email, .. }) = &mut self.status_account_display
         {
             *email = current_email;
+            self.refresh_status_line();
         }
     }
 

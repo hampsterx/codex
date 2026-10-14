@@ -3029,6 +3029,54 @@ async fn status_line_codex_home_identifies_the_active_codex_home() {
 }
 
 #[tokio::test]
+async fn status_line_account_tracks_the_authenticated_account() {
+    let (mut chat, mut rx, _op_rx) = make_chatwidget_manual(/*model_override*/ None).await;
+    chat.show_welcome_banner = false;
+    chat.thread_id = Some(ThreadId::new());
+    chat.local_settings.tui.status_line =
+        Some(vec!["codex-home".to_string(), "account".to_string()]);
+    chat.local_settings.codex_home =
+        codex_utils_absolute_path::AbsolutePathBuf::from_absolute_path(
+            &std::env::temp_dir().join(".codex-work"),
+        )
+        .expect("absolute Codex home path");
+    chat.status_account_display = Some(crate::status::StatusAccountDisplay::ChatGpt {
+        email: None,
+        plan: Some("Team".to_string()),
+    });
+    chat.refresh_status_line();
+    assert_eq!(
+        status_line_text(&chat),
+        Some("Codex work · Team".to_string())
+    );
+
+    chat.on_account_email_loaded(Some("user@example.com".to_string()));
+    assert_eq!(
+        status_line_text(&chat),
+        Some("Codex work · user@example.com (Team)".to_string())
+    );
+    assert!(drain_insert_history(&mut rx).is_empty());
+
+    let width = 80;
+    let height = chat.desired_height(width);
+    let mut terminal = Terminal::new(TestBackend::new(width, height)).expect("create terminal");
+    terminal
+        .draw(|frame| chat.render(frame.area(), frame.buffer_mut()))
+        .expect("draw account footer");
+    assert_chatwidget_snapshot!(
+        "status_line_account_work_footer",
+        normalized_backend_snapshot(terminal.backend())
+    );
+
+    chat.status_account_display = Some(crate::status::StatusAccountDisplay::ApiKey);
+    chat.refresh_status_line();
+    assert_eq!(
+        status_line_text(&chat),
+        Some("Codex work · API key".to_string())
+    );
+}
+
+#[tokio::test]
 async fn status_line_context_used_renders_labeled_percent() {
     let (mut chat, mut rx, _op_rx) = make_chatwidget_manual(/*model_override*/ None).await;
     chat.thread_id = Some(ThreadId::new());

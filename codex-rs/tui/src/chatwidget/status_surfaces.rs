@@ -755,6 +755,17 @@ impl ChatWidget {
                 };
                 Some(format!("Codex {label}"))
             }
+            StatusLineItem::Account => match self.status_account_display.as_ref()? {
+                crate::status::StatusAccountDisplay::ChatGpt { email, plan } => {
+                    Some(match (email, plan) {
+                        (Some(email), Some(plan)) => format!("{email} ({plan})"),
+                        (Some(email), None) => email.clone(),
+                        (None, Some(plan)) => plan.clone(),
+                        (None, None) => "ChatGPT".to_string(),
+                    })
+                }
+                crate::status::StatusAccountDisplay::ApiKey => Some("API key".to_string()),
+            },
             StatusLineItem::GitBranch => self.status_line_branch.clone(),
             StatusLineItem::PullRequestNumber => self
                 .status_line_git_summary
@@ -889,6 +900,7 @@ impl ChatWidget {
             StatusSurfacePreviewItem::CurrentDir => StatusLineItem::CurrentDir,
             StatusSurfacePreviewItem::Hostname => StatusLineItem::Hostname,
             StatusSurfacePreviewItem::CodexHome => StatusLineItem::CodexHome,
+            StatusSurfacePreviewItem::Account => StatusLineItem::Account,
             StatusSurfacePreviewItem::ThreadName => StatusLineItem::ThreadName,
             StatusSurfacePreviewItem::ThreadTitle => StatusLineItem::ThreadTitle,
             StatusSurfacePreviewItem::GitBranch => StatusLineItem::GitBranch,
