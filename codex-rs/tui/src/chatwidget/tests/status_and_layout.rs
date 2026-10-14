@@ -2990,6 +2990,45 @@ async fn status_line_hostname_renders_current_machine_hostname() {
 }
 
 #[tokio::test]
+async fn status_line_codex_home_identifies_the_active_codex_home() {
+    let (mut chat, mut rx, _op_rx) = make_chatwidget_manual(/*model_override*/ None).await;
+    chat.show_welcome_banner = false;
+    chat.thread_id = Some(ThreadId::new());
+    chat.local_settings.tui.status_line = Some(vec!["codex-home".to_string()]);
+
+    for (directory, expected) in [
+        (".codex", "Codex home"),
+        (".codex-work", "Codex work"),
+        ("custom-root", "Codex custom-root"),
+    ] {
+        let codex_home = std::env::temp_dir().join(directory);
+        chat.local_settings.codex_home =
+            codex_utils_absolute_path::AbsolutePathBuf::from_absolute_path(&codex_home)
+                .expect("absolute Codex home path");
+        chat.refresh_status_line();
+        assert_eq!(status_line_text(&chat), Some(expected.to_string()));
+    }
+
+    let codex_home = std::env::temp_dir().join(".codex-work");
+    chat.local_settings.codex_home =
+        codex_utils_absolute_path::AbsolutePathBuf::from_absolute_path(&codex_home)
+            .expect("absolute Codex home path");
+    chat.refresh_status_line();
+    assert!(drain_insert_history(&mut rx).is_empty());
+
+    let width = 80;
+    let height = chat.desired_height(width);
+    let mut terminal = Terminal::new(TestBackend::new(width, height)).expect("create terminal");
+    terminal
+        .draw(|frame| chat.render(frame.area(), frame.buffer_mut()))
+        .expect("draw Codex home footer");
+    assert_chatwidget_snapshot!(
+        "status_line_codex_home_work_footer",
+        normalized_backend_snapshot(terminal.backend())
+    );
+}
+
+#[tokio::test]
 async fn status_line_context_used_renders_labeled_percent() {
     let (mut chat, mut rx, _op_rx) = make_chatwidget_manual(/*model_override*/ None).await;
     chat.thread_id = Some(ThreadId::new());

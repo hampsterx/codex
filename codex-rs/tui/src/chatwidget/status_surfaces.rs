@@ -739,6 +739,22 @@ impl ChatWidget {
             }
             StatusLineItem::ProjectRoot => self.status_line_project_root_name(),
             StatusLineItem::Hostname => os_host_name(),
+            StatusLineItem::CodexHome => {
+                let name = self
+                    .local_settings
+                    .codex_home
+                    .as_path()
+                    .file_name()?
+                    .to_string_lossy();
+                let label = match name.as_ref() {
+                    ".codex" => "home",
+                    other => other
+                        .strip_prefix(".codex-")
+                        .filter(|profile| !profile.is_empty())
+                        .unwrap_or(other),
+                };
+                Some(format!("Codex {label}"))
+            }
             StatusLineItem::GitBranch => self.status_line_branch.clone(),
             StatusLineItem::PullRequestNumber => self
                 .status_line_git_summary
@@ -872,6 +888,7 @@ impl ChatWidget {
             StatusSurfacePreviewItem::TaskProgress => return self.terminal_title_task_progress(),
             StatusSurfacePreviewItem::CurrentDir => StatusLineItem::CurrentDir,
             StatusSurfacePreviewItem::Hostname => StatusLineItem::Hostname,
+            StatusSurfacePreviewItem::CodexHome => StatusLineItem::CodexHome,
             StatusSurfacePreviewItem::ThreadName => StatusLineItem::ThreadName,
             StatusSurfacePreviewItem::ThreadTitle => StatusLineItem::ThreadTitle,
             StatusSurfacePreviewItem::GitBranch => StatusLineItem::GitBranch,

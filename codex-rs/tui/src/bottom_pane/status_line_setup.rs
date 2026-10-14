@@ -12,6 +12,7 @@
 //! - Model information (name, reasoning level)
 //! - Directory paths (current dir, project root)
 //! - Machine hostname
+//! - Codex home directory identity
 //! - Git information (branch name)
 //! - Permissions profile
 //! - Approval mode
@@ -77,6 +78,9 @@ pub(crate) enum StatusLineItem {
 
     /// Hostname of the machine running Codex.
     Hostname,
+
+    /// Short label derived from the active Codex home directory.
+    CodexHome,
 
     /// Current git branch name (if in a repository).
     GitBranch,
@@ -170,6 +174,7 @@ impl StatusLineItem {
             StatusLineItem::CurrentDir => "Current working directory",
             StatusLineItem::ProjectRoot => "Project name (omitted when unavailable)",
             StatusLineItem::Hostname => "Current machine hostname (omitted when unavailable)",
+            StatusLineItem::CodexHome => "Active CODEX_HOME directory label",
             StatusLineItem::GitBranch => "Current Git branch (omitted when unavailable)",
             StatusLineItem::PullRequestNumber => {
                 "Open pull request number for the current branch (omitted when unavailable)"
@@ -230,6 +235,7 @@ impl StatusLineItem {
             StatusLineItem::CurrentDir => StatusSurfacePreviewItem::CurrentDir,
             StatusLineItem::ProjectRoot => StatusSurfacePreviewItem::ProjectRoot,
             StatusLineItem::Hostname => StatusSurfacePreviewItem::Hostname,
+            StatusLineItem::CodexHome => StatusSurfacePreviewItem::CodexHome,
             StatusLineItem::GitBranch => StatusSurfacePreviewItem::GitBranch,
             StatusLineItem::PullRequestNumber => StatusSurfacePreviewItem::PullRequestNumber,
             StatusLineItem::BranchChanges => StatusSurfacePreviewItem::BranchChanges,
